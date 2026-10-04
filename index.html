@@ -20,6 +20,8 @@
         .instruction-list { text-align: left; line-height: 1.6; margin-bottom: 25px; padding-left: 20px; font-size: 15px; }
         .instruction-list li { margin-bottom: 10px; }
         .summary-item { margin: 10px 0; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 5px; text-align: left; }
+        #canvas-container { height: 220px; display: flex; align-items: flex-end; justify-content: center; margin: 20px 0; }
+        #balloon { width: 50px; height: 60px; border-radius: 50%; display: inline-block; transition: width 0.1s, height 0.1s; position: relative; }
     </style>
 </head>
 <body>
@@ -195,13 +197,12 @@
         document.getElementById('game-container').style.display = 'none';
         document.getElementById('summary-screen').style.display = 'block';
 
-        var totalSuccessPumps = 0;
-        for (var i = 0; i < successPumps.length; i++) {
-            totalSuccessPumps += successPumps[i];
-        }
-        
-        var adjustedBartScore = "0.00";
-        if (successPumps.length > 0) {
+var totalSuccessPumps = 0;
+for (var i = 0; i < successPumps.length; i++) {
+totalSuccessPumps += successPumps[i];
+}
+var adjustedBartScore = "0.00";
+if (successPumps.length > 0) {
 adjustedBartScore = (totalSuccessPumps / successPumps.length).toFixed(2);
 }
 var finalCashPayout = 0;
@@ -220,4 +221,3 @@ document.getElementById('res-success').innerText = successPumps.length;
 document.getElementById('res-pops').innerText = popCount;
 document.getElementById('res-pumps').innerText = adjustedBartScore;
 }
-    
