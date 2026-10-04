@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BART Risk Task Experiment</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; text-align: center; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { background-color: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 550px; width: 100%; box-sizing: border-box; }
+        h1 { margin-top: 0; color: #4fa8ff; }
+        h2 { color: #4fa8ff; margin-top: 0; }
+        input[type="text"] { background-color: #2a2a2a; color: white; border: 1px solid #444; padding: 12px; border-radius: 6px; font-size: 16px; width: 80%; text-align: center; margin-bottom: 20px; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 5px; transition: background 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #444; color: #888; cursor: not-allowed; }
+        .collect-btn { background-color: #28a745; }
+        .collect-btn:hover { background-color: #218838; }
+        #instructions-screen, #game-container, #summary-screen { display: none; }
+        #canvas-container { height: 220px; display: flex; align-items: flex-end; justify-content: center; margin: 20px 0; }
+        #balloon { width: 50px; height: 60px; border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; display: inline-block; transition: width 0.1s, height 0.1s; position: relative; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .stats-box { display: flex; justify-content: space-around; margin: 20px 0; background: #252525; padding: 15px; border-radius: 8px; font-size: 15px; border-left: 4px solid #007bff; }
+        .bank-val { font-size: 24px; font-weight: bold; color: #2ecc71; margin: 10px 0; }
+        .instruction-list { text-align: left; line-height: 1.6; margin-bottom: 25px; padding-left: 20px; }
+        .instruction-list li { margin-bottom: 10px; }
+        #summary-screen { text-align: left; }
+        .summary-item { margin: 10px 0; font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+<!-- SCREEN 1: LOGIN -->
+<div class="card" id="setup-screen">
+    <h1>BART Simulation</h1>
+    <p>Please enter the participant's assigned tracking ID number to unlock the experiment protocol.</p>
+    <input type="text" id="participant-id" placeholder="e.g., #001" autocomplete="off">
+    <br>
+    <button onclick="showInstructions()">Initialize Experiment</button>
+</div>
+
+<!-- SCREEN 2: INSTRUCTIONS -->
+<div class="card" id="instructions-screen">
+    <h2>Task Instructions</h2>
+    <p>Please read the following rules carefully before beginning the task:</p>
+    <ul class="instruction-list">
+        <li>You will be presented with a sequence of <strong>30 balloons</strong> total.</li>
+        <li>For each balloon, click <strong>"Pump Balloon"</strong> to inflate it. Every successful pump adds <strong>$0.01 (1 cent)</strong> to your temporary bank.</li>
+        <li>You can choose to click <strong>"Collect Bank"</strong> at any time to permanently save your earnings for that balloon.</li>
+        <li><strong>The Risk:</strong> Balloons pop randomly! Each color (Orange, Yellow, Blue) has a different safety limit. If a balloon explodes before you secure it, you lose all money accumulated on <em>that specific balloon</em>.</li>
+        <li>Your final cash score is real. Play carefully to maximize your financial reward!</li>
+    </ul>
+    <button onclick="startGame()">Start Game (Balloon 1/30)</button>
+</div>
+
+<!-- SCREEN 3: ACTIVE GAMEPLAY -->
+<div class="card" id="game-container">
+    <h2 style="margin:0; color:#aaa;">Balloon <span id="current-balloon">1</span> of 30</h2>
+    <div class="stats-box">
+        <div>Balloon Color: <br><strong id="balloon-color-text" style="text-transform: capitalize;">-</strong></div>
+        <div>Potential on Balloon:<br><strong id="temp-bank">\$0.00</strong></div>
+    </div>
+
+    <div id="canvas-container">
+        <div id="balloon"></div>
+    </div>
+
+    <div class="bank-val">Total Permanent Bank: <span id="perm-bank">\$0.00</span></div>
+
+    <div>
+        <button id="pump-btn" onclick="pumpBalloon()">Pump Balloon</button>
+        <button id="collect-btn" class="collect-btn" onclick="collectEarnings()">Collect Bank</button>
+    </div>
+</div>
+
+<!-- SCREEN 4: SUMMARY/DATA DUMP -->
+<div class="card" id="summary-screen">
+    <h1 style="color:#2ecc71; text-align:center;">Protocol Complete</h1>
+    <p style="text-align:center; color:#aaa; margin-bottom:20px;">Record the empirical data block below into the primary analytical ledger.</p>
+    <div class="summary-item"><strong>Participant ID:</strong> <span id="res-id">-</span></div>
+    <div class="summary-item"><strong>Total Cash Earned:</strong> <span id="res-cash" style="color:#2ecc71; font-weight:bold;">-</span></div>
+    <div class="summary-item"><strong>Total Unpopped Balloons:</strong> <span id="res-success">-</span> / 30</div>
+    <div class="summary-item"><strong>Total Exploded Balloons:</strong> <span id="res-pops">-</span> / 30</div>
+    <div class="summary-item"><strong>Avg. Pumps (Adjusted BART Score):</strong> <span id="res-pumps" style="color:#4fa8ff; font-weight:bold;">-</span></div>
+    <p style="font-size:12px; color:#666; text-align:center; margin-top:20px;">*Adjusted BART Score is the mean number of pumps on successful trials.</p>
+</div>
+
+<script>
+    let pId = "";
+    let currentBalloon = 1;
+    let totalBalloons = 30;
+    let permBank = 0; 
+    let tempBank = 0; 
+    
+    let successPumps = []; 
+    let popCount = 0;
+
+    let balloonSize = 50;
+    let maxPumps = 0;
+    let currentPumps = 0;
+    let isPopped = false;
+
+    // Standard configurations reflecting empirical research guidelines
+    const colors = [
+        { name: 'orange', minPop: 4, maxPop: 12, hex: '#e67e22' },
+        { name: 'yellow', minPop: 8, maxPop: 24, hex: '#f1c40f' },
+        { name: 'blue',   minPop: 16, maxPop: 48, hex: '#3498db' }
+    ];
+    let currentColor = {};
+
+    function showInstructions() {
+        pId = document.getElementById('participant-id').value.trim();
+        if (!pId) { alert("An identifier token is required to maintain sample structure."); return; }
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('instructions-screen').style.display = 'block';
+    }
+
+    function startGame() {
+        document.getElementById('instructions-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        initBalloon();
+    }
+
+    function initBalloon() {
+        isPopped = false;
+        currentPumps = 0;
+        tempBank = 0;
+        balloonSize = 50;
+        
+        currentColor = colors[Math.floor(Math.random() * colors.length)];
+        maxPumps = Math.floor(Math.random() * (currentColor.maxPop - currentColor.minPop + 1)) + currentColor.minPop;
+
+        document.getElementById('current-balloon').innerText = currentBalloon;
+        document.getElementById('balloon-color-text').innerText = currentColor.name;
+        document.getElementById('balloon-color-text').style.color = currentColor.hex;
+        document.getElementById('temp-bank').innerText = "\$0.00";
+        
+        const b = document.getElementById('balloon');
+        b.style.backgroundColor = currentColor.hex;
+        b.style.width = balloonSize + 'px';
+        b.style.height = (balloonSize * 1.2) + 'px';
+        b.style.opacity = '1';
+        
+        document.getElementById('pump-btn').disabled = false;
+        document.getElementById('collect-btn').disabled = false;
+    }
+
+    function pumpBalloon() {
+        if (isPopped) return;
+        currentPumps++;
+        
+        if (currentPumps >= maxPumps) {
+            isPopped = true;
+            popCount++;
+            document.getElementById('pump-btn').disabled = true;
+            document.getElementById('collect-btn').disabled = true;
+            
+            const b = document.getElementById('balloon');
+            b.style.opacity = '0';
+            tempBank = 0;
+            document.getElementById('temp-bank').innerText = "EXPLODED (\$0.00)";
+            document.getElementById('temp-bank').style.color = '#e74c3c';
+
+            setTimeout(() => {
+                document.getElementById('temp-bank').style.color = '#ffffff';
+                nextRound();
+            }, 1200);
+        } else {
+            balloonSize += 5;
+            const b = document.getElementById('balloon');
+            b.style.width = balloonSize + 'px';
+            b.style.height = (balloonSize * 1.2) + 'px';
+            
+            tempBank += 1; 
+            document.getElementById('temp-bank').innerText = `$${(tempBank / 100).toFixed(2)}`;
+        }
+    }
+
+    function collectEarnings() {
+        if (isPopped || currentPumps === 0) return;
+        permBank += tempBank;
+        successPumps.push(currentPumps); 
+        document.getElementById('perm-bank').innerText = `$${(permBank / 100).toFixed(2)}`;
+        nextRound();
+    }
+
+    function nextRound() {
+        currentBalloon++;
+        if (currentBalloon > totalBalloons) {
+            endExperiment();
+        } else {
+            initBalloon();
+        }
+    }
+
+    function endExperiment() {
+        document.getElementById('game-container').style.display = 'none';
+        document.getElementById('summary-screen').style.display = 'block';
+
+        let totalSuccessPumps = successPumps.reduce((a, b) => a + b, 0);
